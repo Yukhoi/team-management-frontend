@@ -1,0 +1,16 @@
+html,
+body,
+#app {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family:
+    Inter,
+    "Segoe UI",
+    Arial,
+    sans-serif;
+  color: var(--el-text-color-primary);
+  background-color: var(--el-bg-color-page);
+}
