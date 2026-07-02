@@ -11,8 +11,6 @@ interface BackendErrorResponse {
   data?: Record<string, string>
 }
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL as string | undefined
-
 function getErrorMessage(error: AxiosError<BackendErrorResponse>): string {
   const responseData = error.response?.data
   const dataMessage = responseData?.data
@@ -43,7 +41,7 @@ function getErrorMessage(error: AxiosError<BackendErrorResponse>): string {
 }
 
 export const http = axios.create({
-  baseURL: apiBaseUrl,
+  baseURL: import.meta.env.VITE_API_BASE_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

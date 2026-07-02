@@ -124,7 +124,7 @@ The platform helps a football team manage:
 flowchart LR
   Browser["Browser"]
   Frontend["Vue 3 Frontend<br/>Vite + TypeScript + Element Plus"]
-  Gateway["Gateway<br/>localhost:8088"]
+  Gateway["Gateway<br/>local: localhost:8088<br/>production: yexiaoparis-management.duckdns.org"]
 
   Identity["Identity Service<br/>localhost:8087"]
   Team["Team Service<br/>localhost:8082"]
@@ -167,7 +167,8 @@ flowchart LR
 The frontend never calls individual service ports directly. All API requests go through the backend gateway:
 
 ```text
-http://localhost:8088
+Local:      http://localhost:8088
+Production: http://yexiaoparis-management.duckdns.org
 ```
 
 ---
@@ -423,6 +424,12 @@ For frontend-only development, Node.js and a running backend Gateway are enough.
 
 ### Frontend
 
+The local Vite environment uses `.env.development`:
+
+```env
+VITE_API_BASE_URL=http://localhost:8088
+```
+
 Install dependencies:
 
 ```bash
@@ -498,9 +505,26 @@ Do not configure the frontend to call service ports such as `8087`, `8084`, or `
 
 ### Frontend
 
+The frontend reads its backend gateway URL from `VITE_API_BASE_URL`. Vite loads the correct file by mode:
+
+| File | Mode | Backend Gateway URL |
+| --- | --- | --- |
+| `.env.development` | Local development | `http://localhost:8088` |
+| `.env.production` | Production build | `http://yexiaoparis-management.duckdns.org` |
+
+Local development:
+
 ```env
 VITE_API_BASE_URL=http://localhost:8088
 ```
+
+Production:
+
+```env
+VITE_API_BASE_URL=http://yexiaoparis-management.duckdns.org
+```
+
+Only public frontend configuration belongs in committed Vite env files. Do not commit real passwords, JWT secrets, private tokens, `.env.local`, or secret production env files.
 
 ### Gateway
 
@@ -554,6 +578,12 @@ Never commit real passwords, JWT secrets, production tokens, or cloud credential
 
 ### Frontend Build
 
+Production builds use `.env.production` and point API requests at:
+
+```text
+http://yexiaoparis-management.duckdns.org
+```
+
 ```bash
 npm run build
 ```
@@ -592,6 +622,7 @@ A production compose setup should include:
 
 - Externalized environment variables
 - No hardcoded secrets
+- Frontend built with `VITE_API_BASE_URL=http://yexiaoparis-management.duckdns.org`
 - Persistent PostgreSQL volumes
 - Kafka and Redis health checks
 - Service restart policies
