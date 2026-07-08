@@ -1,4 +1,5 @@
 export type LeaderboardBoardType =
+  | 'GOAL'
   | 'SCORER'
   | 'ASSIST'
   | 'APPEARANCE'
