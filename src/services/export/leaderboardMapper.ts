@@ -18,7 +18,7 @@ export function mapLeaderboardToPdfRows(
     rank: leaderboard.rankNo ?? index + 1,
     playerName: leaderboard.entityName ?? buildFallbackPlayerName(leaderboard, index),
     mainValue: leaderboard.metricValue ?? 0,
-    appearances: type === 'APPEARANCE' ? undefined : undefined,
+    appearances: type === 'APPEARANCE' ? undefined : leaderboard.appearanceCount,
   }))
 }
 

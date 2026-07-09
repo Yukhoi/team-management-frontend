@@ -349,12 +349,16 @@ onMounted(async () => {
     <el-card v-else class="statistics-page__table-card" shadow="never">
       <el-table :data="rows" stripe>
         <el-table-column prop="rankNo" label="Rank" min-width="90" sortable />
-        <el-table-column prop="entityId" label="Entity ID" min-width="120" />
-        <el-table-column prop="entityName" label="Entity" min-width="180" />
-        <el-table-column prop="metricValue" label="Metric Value" min-width="140" sortable />
+        <el-table-column prop="entityName" label="Player" min-width="180" />
+        <el-table-column prop="metricValue" label="Value" min-width="120" sortable />
+        <el-table-column prop="appearanceCount" label="Appearances" min-width="140" sortable>
+          <template #default="{ row }">
+            {{ row.appearanceCount ?? '-' }}
+          </template>
+        </el-table-column>
         <el-table-column prop="boardType" label="Board Type" min-width="170" />
         <el-table-column prop="season" label="Season" min-width="100" />
-        <el-table-column prop="tournamentId" label="Tournament ID" min-width="130" />
+        <el-table-column prop="tournamentId" label="Tournament" min-width="130" />
         <template #empty>
           <el-empty description="No leaderboards found" />
         </template>

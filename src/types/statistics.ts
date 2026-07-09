@@ -68,6 +68,7 @@ export interface LeaderboardResponse {
   boardType?: LeaderboardBoardType
   season?: string
   tournamentId?: number
+  appearanceCount?: number
 }
 
 export type Leaderboard = LeaderboardResponse
