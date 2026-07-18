@@ -622,7 +622,7 @@ A production compose setup should include:
 
 - Externalized environment variables
 - No hardcoded secrets
-- Frontend built with `VITE_API_BASE_URL=http://yexiaoparis-management.duckdns.org`
+- Frontend built with `VITE_API_BASE_URL=https://yexiaoparis-management.duckdns.org`
 - Persistent PostgreSQL volumes
 - Kafka and Redis health checks
 - Service restart policies

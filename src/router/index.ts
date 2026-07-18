@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 
 import MainLayout from '../layouts/MainLayout.vue'
 import { useAuthStore } from '../stores/auth'
@@ -32,7 +32,7 @@ declare module 'vue-router' {
 }
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHashHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
@@ -201,18 +201,31 @@ const router = createRouter({
 router.beforeEach((to) => {
   const authStore = useAuthStore()
   const requiresAuth = to.matched.some((route) => route.meta.requiresAuth)
-  const allowedRoles = to.meta.allowedRoles
+
+  // Use matched routes so parent/child role metadata can both be respected.
+  const allowedRoles = to.matched
+    .map((route) => route.meta.allowedRoles)
+    .find((roles): roles is RoleCode[] => Boolean(roles))
 
   if (requiresAuth && !authStore.isAuthenticated) {
-    return '/login'
+    return {
+      name: 'login',
+      query: {
+        redirect: to.fullPath,
+      },
+    }
   }
 
   if (allowedRoles && !hasAnyRole(allowedRoles, authStore.currentUser?.roles)) {
-    return '/403'
+    return {
+      name: 'access-denied',
+    }
   }
 
-  if (to.path === '/login' && authStore.isAuthenticated) {
-    return '/dashboard'
+  if (to.name === 'login' && authStore.isAuthenticated) {
+    return {
+      name: 'dashboard',
+    }
   }
 
   return true
