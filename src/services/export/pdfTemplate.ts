@@ -1,7 +1,8 @@
-import { rgb } from 'pdf-lib'
+import { rgb } from "pdf-lib";
 
-export const leaderboardTemplatePath = '/templates/leaderboard-template.pdf'
-export const chineseFontPath = '/fonts/NotoSansSC-Regular.ttf'
+export const leaderboardTemplatePath = `${import.meta.env.BASE_URL}templates/leaderboard-template.pdf`;
+
+export const chineseFontPath = `${import.meta.env.BASE_URL}fonts/NotoSansSC-Regular.ttf`;
 
 export const pdfTemplate = {
   page: {
@@ -42,4 +43,4 @@ export const pdfTemplate = {
     tableHeader: rgb(1, 1, 1),
     row: rgb(0.12, 0.14, 0.18),
   },
-} as const
+} as const;
