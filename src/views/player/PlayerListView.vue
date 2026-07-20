@@ -9,6 +9,7 @@ import {
   getPlayers,
   updatePlayer,
 } from '../../api/player'
+import { getOurTeam } from '../../api/team'
 import { useAuthStore } from '../../stores/auth'
 import { canWriteBusinessData } from '../../utils/permission'
 import type {
@@ -21,6 +22,7 @@ import type {
   PlayerResponse,
   UpdatePlayerRequest,
 } from '../../types/player'
+import type { Team } from '../../types/team'
 
 type PlayerDialogMode = 'create' | 'edit'
 
@@ -71,6 +73,9 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const players = ref<PlayerResponse[]>([])
+const ourTeam = ref<Team | null>(null)
+const ourTeamLoading = ref(false)
+const ourTeamError = ref<string | null>(null)
 const loading = ref(false)
 const error = ref(false)
 const submitting = ref(false)
@@ -99,7 +104,7 @@ const statusForm = reactive<StatusFormState>({
 const playerRules = computed<FormRules<PlayerFormState>>(() => ({
   teamId:
     dialogMode.value === 'create'
-      ? [{ required: true, message: 'Team ID is required', trigger: 'blur' }]
+      ? [{ required: true, message: 'Team is required', trigger: 'blur' }]
       : [],
   name: [{ required: true, message: 'Player name is required', trigger: 'blur' }],
   position: [{ required: true, message: 'Position is required', trigger: 'change' }],
@@ -115,6 +120,11 @@ const canManagePlayers = computed(() => canWriteBusinessData(authStore.currentUs
 
 const dialogTitle = computed(() =>
   dialogMode.value === 'create' ? 'Create Player' : 'Edit Player',
+)
+const submitPlayerDisabled = computed(
+  () =>
+    submitting.value ||
+    (dialogMode.value === 'create' && (ourTeamLoading.value || !ourTeam.value?.id)),
 )
 
 function hasErrorResponse(errorValue: unknown): errorValue is ErrorWithResponse {
@@ -140,7 +150,8 @@ function getErrorMessage(errorValue: unknown, fallback: string): string {
 }
 
 function resetPlayerForm(): void {
-  playerForm.teamId = undefined
+  playerForm.teamId =
+    dialogMode.value === 'create' ? ourTeam.value?.id : undefined
   playerForm.name = ''
   playerForm.jerseyNumber = undefined
   playerForm.birthDate = undefined
@@ -164,12 +175,12 @@ function resetStatusForm(): void {
 }
 
 function buildCreatePayload(): CreatePlayerRequest | null {
-  if (!playerForm.teamId || !playerForm.position) {
+  if (!ourTeam.value?.id || !playerForm.position) {
     return null
   }
 
   return {
-    teamId: playerForm.teamId,
+    teamId: ourTeam.value.id,
     name: playerForm.name,
     jerseyNumber: playerForm.jerseyNumber,
     birthDate: playerForm.birthDate,
@@ -250,9 +261,37 @@ async function loadPlayers(): Promise<void> {
   }
 }
 
+async function loadOurTeam(): Promise<void> {
+  ourTeamLoading.value = true
+  ourTeamError.value = null
+
+  try {
+    const response = await getOurTeam()
+    const team = response.data
+
+    if (!team?.id || team.isOurTeam !== true) {
+      ourTeam.value = null
+      ourTeamError.value = 'Unable to load our team.'
+      return
+    }
+
+    ourTeam.value = team
+
+    if (dialogMode.value === 'create') {
+      playerForm.teamId = team.id
+    }
+  } catch {
+    ourTeam.value = null
+    ourTeamError.value = 'Unable to load our team.'
+  } finally {
+    ourTeamLoading.value = false
+  }
+}
+
 function openCreateDialog(): void {
   dialogMode.value = 'create'
   resetPlayerForm()
+  playerForm.teamId = ourTeam.value?.id
   dialogVisible.value = true
 }
 
@@ -293,6 +332,19 @@ function openStatusDialog(player: PlayerResponse): void {
 async function submitPlayer(): Promise<void> {
   if (!playerFormRef.value) {
     return
+  }
+
+  if (dialogMode.value === 'create') {
+    if (ourTeamLoading.value) {
+      return
+    }
+
+    if (!ourTeam.value?.id) {
+      ElMessage.error('Our team is unavailable')
+      return
+    }
+
+    playerForm.teamId = ourTeam.value.id
   }
 
   try {
@@ -379,6 +431,7 @@ async function handlePageChange(nextPage: number): Promise<void> {
 
 onMounted(() => {
   void loadPlayers()
+  void loadOurTeam()
 })
 </script>
 
@@ -398,6 +451,20 @@ onMounted(() => {
         </el-button>
       </div>
     </el-card>
+
+    <el-alert
+      v-if="canManagePlayers && ourTeamError"
+      type="error"
+      :title="ourTeamError"
+      show-icon
+      :closable="false"
+    >
+      <template #default>
+        <el-button type="danger" plain size="small" @click="loadOurTeam">
+          Retry
+        </el-button>
+      </template>
+    </el-alert>
 
     <el-skeleton v-if="loading" :rows="6" animated />
 
@@ -487,8 +554,12 @@ onMounted(() => {
         :rules="playerRules"
         label-position="top"
       >
-        <el-form-item v-if="dialogMode === 'create'" label="Team ID" prop="teamId">
-          <el-input-number v-model="playerForm.teamId" :min="1" />
+        <el-form-item v-if="dialogMode === 'create'" label="Team" prop="teamId">
+          <el-input
+            :model-value="ourTeam?.name ?? ''"
+            :placeholder="ourTeamLoading ? 'Loading team...' : 'Team unavailable'"
+            disabled
+          />
         </el-form-item>
 
         <el-form-item label="Name" prop="name">
@@ -573,8 +644,13 @@ onMounted(() => {
         <el-button :disabled="submitting" @click="dialogVisible = false">
           Cancel
         </el-button>
-        <el-button type="primary" :loading="submitting" @click="submitPlayer">
-          Submit
+        <el-button
+          type="primary"
+          :loading="submitting"
+          :disabled="submitPlayerDisabled"
+          @click="submitPlayer"
+        >
+          {{ dialogMode === 'create' ? 'Create Player' : 'Submit' }}
         </el-button>
       </template>
     </el-dialog>
