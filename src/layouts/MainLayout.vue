@@ -2,10 +2,13 @@
 import { computed, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
+  ArrowDown,
   DataAnalysis,
   DataBoard,
   Document,
   Football,
+  Lock,
+  SwitchButton,
   Trophy,
   User,
   UserFilled,
@@ -102,6 +105,17 @@ async function logout(): Promise<void> {
     await router.push('/login')
   }
 }
+
+async function handleUserCommand(command: string): Promise<void> {
+  if (command === 'change-password') {
+    await router.push('/account/change-password')
+    return
+  }
+
+  if (command === 'logout') {
+    await logout()
+  }
+}
 </script>
 
 <template>
@@ -111,16 +125,34 @@ async function logout(): Promise<void> {
         <span class="main-layout__title">Team Management</span>
       </div>
 
-      <div class="main-layout__user">
-        <div class="main-layout__identity">
-          <strong>{{ username }}</strong>
-          <span>{{ roleText }}</span>
-        </div>
+      <el-dropdown trigger="click" @command="handleUserCommand">
+        <button class="main-layout__user" type="button">
+          <span class="main-layout__identity">
+            <strong>{{ username }}</strong>
+            <span>{{ roleText }}</span>
+          </span>
+          <el-icon>
+            <ArrowDown />
+          </el-icon>
+        </button>
 
-        <el-button type="primary" plain @click="logout">
-          Logout
-        </el-button>
-      </div>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="change-password">
+              <el-icon>
+                <Lock />
+              </el-icon>
+              <span>Change Password</span>
+            </el-dropdown-item>
+            <el-dropdown-item divided command="logout">
+              <el-icon>
+                <SwitchButton />
+              </el-icon>
+              <span>Logout</span>
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
     </el-header>
 
     <el-container class="main-layout__body">
@@ -180,6 +212,12 @@ async function logout(): Promise<void> {
     min-width: 0;
     align-items: center;
     gap: 12px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    padding: 0;
   }
 
   &__identity {

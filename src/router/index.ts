@@ -3,6 +3,7 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import MainLayout from '../layouts/MainLayout.vue'
 import { useAuthStore } from '../stores/auth'
 import { hasAnyRole, type RoleCode } from '../utils/permission'
+import ChangePasswordView from '../views/account/ChangePasswordView.vue'
 import AuditDetailView from '../views/audit/AuditDetailView.vue'
 import AuditListView from '../views/audit/AuditListView.vue'
 import DashboardView from '../views/DashboardView.vue'
@@ -170,6 +171,15 @@ const router = createRouter({
           meta: {
             title: 'Audit Log Detail',
             allowedRoles: ['ADMIN'],
+          },
+        },
+        {
+          path: 'account/change-password',
+          name: 'change-password',
+          component: ChangePasswordView,
+          meta: {
+            requiresAuth: true,
+            title: 'Change Password',
           },
         },
         {
