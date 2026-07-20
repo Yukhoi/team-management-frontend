@@ -13,6 +13,7 @@ import {
   getMatches,
   updateMatchResult,
 } from '../../api/match'
+import { getOurTeam, getTeams } from '../../api/team'
 import { getTournaments } from '../../api/tournament'
 import { useAuthStore } from '../../stores/auth'
 import { canWriteBusinessData } from '../../utils/permission'
@@ -24,6 +25,7 @@ import type {
   MatchStatus,
   UpdateMatchResultRequest,
 } from '../../types/match'
+import type { Team } from '../../types/team'
 import type { TournamentResponse } from '../../types/tournament'
 
 interface ErrorWithResponse {
@@ -58,9 +60,15 @@ const authStore = useAuthStore()
 
 const matches = ref<MatchResponse[]>([])
 const tournaments = ref<TournamentResponse[]>([])
+const ourTeam = ref<Team | null>(null)
+const opponentTeams = ref<Team[]>([])
 const loading = ref(false)
 const error = ref(false)
 const tournamentLoading = ref(false)
+const ourTeamLoading = ref(false)
+const opponentTeamsLoading = ref(false)
+const ourTeamError = ref<string | null>(null)
+const opponentTeamsError = ref<string | null>(null)
 const submitting = ref(false)
 const resultSubmitting = ref(false)
 const createDialogVisible = ref(false)
@@ -90,7 +98,10 @@ const matchRules: FormRules<MatchFormState> = {
     { required: true, message: 'Tournament is required', trigger: 'change' },
   ],
   ourTeamId: [
-    { required: true, message: 'Our team ID is required', trigger: 'blur' },
+    { required: true, message: 'Our team is required', trigger: 'change' },
+  ],
+  opponentTeamId: [
+    { required: true, message: 'Opponent team is required', trigger: 'change' },
   ],
   matchTime: [
     { required: true, message: 'Match time is required', trigger: 'change' },
@@ -113,6 +124,14 @@ const resultRules: FormRules<ResultFormState> = {
 }
 
 const canManageMatches = computed(() => canWriteBusinessData(authStore.currentUser?.roles))
+const submitMatchDisabled = computed(
+  () =>
+    submitting.value ||
+    ourTeamLoading.value ||
+    opponentTeamsLoading.value ||
+    !ourTeam.value?.id ||
+    !matchForm.opponentTeamId,
+)
 
 function hasErrorResponse(errorValue: unknown): errorValue is ErrorWithResponse {
   return typeof errorValue === 'object' && errorValue !== null && 'response' in errorValue
@@ -182,6 +201,18 @@ function getMatchTime(match: MatchResponse): string {
   return match.matchDate ?? match.matchTime ?? ''
 }
 
+function getTeamSnapshot(team: Team): string {
+  return team.shortName || team.name || ''
+}
+
+function getOpponentTeamLabel(team: Team): string {
+  if (team.shortName && team.name) {
+    return `${team.shortName} - ${team.name}`
+  }
+
+  return team.shortName || team.name || ''
+}
+
 function getScoreText(match: MatchResponse): string {
   const ourScore = match.ourScore ?? match.homeScore
   const opponentScore = match.opponentScore ?? match.awayScore
@@ -195,8 +226,10 @@ function getScoreText(match: MatchResponse): string {
 
 function resetMatchForm(): void {
   matchForm.tournamentId = undefined
-  matchForm.ourTeamId = undefined
-  matchForm.ourTeamNameSnapshot = ''
+  matchForm.ourTeamId = ourTeam.value?.id
+  matchForm.ourTeamNameSnapshot = ourTeam.value
+    ? getTeamSnapshot(ourTeam.value)
+    : ''
   matchForm.opponentTeamId = undefined
   matchForm.opponentTeamName = ''
   matchForm.matchTime = ''
@@ -216,9 +249,14 @@ function resetResultForm(): void {
 }
 
 function buildCreatePayload(): CreateMatchRequest | null {
+  const opponentTeam = opponentTeams.value.find(
+    (team) => team.id === matchForm.opponentTeamId,
+  )
+
   if (
     !matchForm.tournamentId ||
-    !matchForm.ourTeamId ||
+    !ourTeam.value?.id ||
+    !opponentTeam?.id ||
     !matchForm.matchTime ||
     !matchForm.homeAway
   ) {
@@ -227,10 +265,10 @@ function buildCreatePayload(): CreateMatchRequest | null {
 
   return {
     tournamentId: matchForm.tournamentId,
-    ourTeamId: matchForm.ourTeamId,
-    ourTeamNameSnapshot: matchForm.ourTeamNameSnapshot,
-    opponentTeamId: matchForm.opponentTeamId,
-    opponentTeamName: matchForm.opponentTeamName,
+    ourTeamId: ourTeam.value.id,
+    ourTeamNameSnapshot: getTeamSnapshot(ourTeam.value),
+    opponentTeamId: opponentTeam.id,
+    opponentTeamName: getTeamSnapshot(opponentTeam),
     matchTime: matchForm.matchTime,
     homeAway: matchForm.homeAway,
     venue: matchForm.venue,
@@ -292,6 +330,54 @@ async function loadMatches(): Promise<void> {
   }
 }
 
+async function loadOurTeam(): Promise<void> {
+  ourTeamLoading.value = true
+  ourTeamError.value = null
+
+  try {
+    const response = await getOurTeam()
+    const team = response.data
+
+    if (!team?.id || team.isOurTeam !== true) {
+      ourTeam.value = null
+      ourTeamError.value = 'Unable to load our team'
+      return
+    }
+
+    ourTeam.value = team
+
+    if (createDialogVisible.value) {
+      matchForm.ourTeamId = team.id
+      matchForm.ourTeamNameSnapshot = getTeamSnapshot(team)
+    }
+  } catch {
+    ourTeam.value = null
+    ourTeamError.value = 'Unable to load our team'
+  } finally {
+    ourTeamLoading.value = false
+  }
+}
+
+async function loadOpponentTeams(): Promise<void> {
+  opponentTeamsLoading.value = true
+  opponentTeamsError.value = null
+
+  try {
+    const response = await getTeams({
+      page: 0,
+      size: 100,
+    })
+    const teams = response.data?.content ?? []
+
+    opponentTeams.value = teams.filter((team) => team.id && team.isOurTeam !== true)
+  } catch {
+    opponentTeams.value = []
+    opponentTeamsError.value = 'Unable to load opponent teams'
+  } finally {
+    opponentTeamsLoading.value = false
+  }
+}
+
 async function openCreateDialog(): Promise<void> {
   resetMatchForm()
   createDialogVisible.value = true
@@ -299,6 +385,14 @@ async function openCreateDialog(): Promise<void> {
   if (!tournaments.value.length) {
     await loadTournaments()
   }
+}
+
+function handleOpponentTeamChange(): void {
+  const opponentTeam = opponentTeams.value.find(
+    (team) => team.id === matchForm.opponentTeamId,
+  )
+
+  matchForm.opponentTeamName = opponentTeam ? getTeamSnapshot(opponentTeam) : ''
 }
 
 function openResultDialog(match: MatchResponse): void {
@@ -320,6 +414,29 @@ async function submitMatch(): Promise<void> {
   if (!matchFormRef.value) {
     return
   }
+
+  if (ourTeamLoading.value || opponentTeamsLoading.value) {
+    return
+  }
+
+  if (!ourTeam.value?.id) {
+    ElMessage.error('Our team is unavailable')
+    return
+  }
+
+  const opponentTeam = opponentTeams.value.find(
+    (team) => team.id === matchForm.opponentTeamId,
+  )
+
+  if (!opponentTeam?.id) {
+    ElMessage.error('Please select an opponent team')
+    return
+  }
+
+  matchForm.ourTeamId = ourTeam.value.id
+  matchForm.ourTeamNameSnapshot = getTeamSnapshot(ourTeam.value)
+  matchForm.opponentTeamId = opponentTeam.id
+  matchForm.opponentTeamName = getTeamSnapshot(opponentTeam)
 
   try {
     await matchFormRef.value.validate()
@@ -405,6 +522,8 @@ async function handlePageChange(nextPage: number): Promise<void> {
 
 onMounted(() => {
   void loadMatches()
+  void loadOurTeam()
+  void loadOpponentTeams()
 })
 </script>
 
@@ -424,6 +543,34 @@ onMounted(() => {
         </el-button>
       </div>
     </el-card>
+
+    <el-alert
+      v-if="canManageMatches && ourTeamError"
+      type="error"
+      :title="ourTeamError"
+      show-icon
+      :closable="false"
+    >
+      <template #default>
+        <el-button type="danger" plain size="small" @click="loadOurTeam">
+          Retry
+        </el-button>
+      </template>
+    </el-alert>
+
+    <el-alert
+      v-if="canManageMatches && opponentTeamsError"
+      type="error"
+      :title="opponentTeamsError"
+      show-icon
+      :closable="false"
+    >
+      <template #default>
+        <el-button type="danger" plain size="small" @click="loadOpponentTeams">
+          Retry
+        </el-button>
+      </template>
+    </el-alert>
 
     <el-skeleton v-if="loading" :rows="6" animated />
 
@@ -537,20 +684,30 @@ onMounted(() => {
           </el-select>
         </el-form-item>
 
-        <el-form-item label="Our Team ID" prop="ourTeamId">
-          <el-input-number v-model="matchForm.ourTeamId" :min="1" />
+        <el-form-item label="Our Team" prop="ourTeamId">
+          <el-input
+            :model-value="ourTeam ? getTeamSnapshot(ourTeam) : ''"
+            :placeholder="ourTeamLoading ? 'Loading team...' : 'Team unavailable'"
+            disabled
+          />
         </el-form-item>
 
-        <el-form-item label="Our Team Name Snapshot" prop="ourTeamNameSnapshot">
-          <el-input v-model="matchForm.ourTeamNameSnapshot" />
-        </el-form-item>
-
-        <el-form-item label="Opponent Team ID" prop="opponentTeamId">
-          <el-input-number v-model="matchForm.opponentTeamId" :min="1" />
-        </el-form-item>
-
-        <el-form-item label="Opponent Team Name" prop="opponentTeamName">
-          <el-input v-model="matchForm.opponentTeamName" />
+        <el-form-item label="Opponent Team" prop="opponentTeamId">
+          <el-select
+            v-model="matchForm.opponentTeamId"
+            :loading="opponentTeamsLoading"
+            filterable
+            placeholder="Select opponent team"
+            @change="handleOpponentTeamChange"
+          >
+            <el-option
+              v-for="team in opponentTeams"
+              :key="team.id"
+              :label="getOpponentTeamLabel(team)"
+              :value="team.id"
+              :disabled="!team.id"
+            />
+          </el-select>
         </el-form-item>
 
         <el-form-item label="Match Time" prop="matchTime">
@@ -585,7 +742,12 @@ onMounted(() => {
         <el-button :disabled="submitting" @click="createDialogVisible = false">
           Cancel
         </el-button>
-        <el-button type="primary" :loading="submitting" @click="submitMatch">
+        <el-button
+          type="primary"
+          :loading="submitting"
+          :disabled="submitMatchDisabled"
+          @click="submitMatch"
+        >
           Submit
         </el-button>
       </template>
