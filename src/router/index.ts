@@ -23,6 +23,7 @@ import TeamDetailView from '../views/team/TeamDetailView.vue'
 import TeamListView from '../views/team/TeamListView.vue'
 import TournamentDetailView from '../views/tournament/TournamentDetailView.vue'
 import TournamentListView from '../views/tournament/TournamentListView.vue'
+import UserManagementView from '../views/user/UserManagementView.vue'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -170,6 +171,15 @@ const router = createRouter({
           component: AuditDetailView,
           meta: {
             title: 'Audit Log Detail',
+            allowedRoles: ['ADMIN'],
+          },
+        },
+        {
+          path: 'users',
+          name: 'user-management',
+          component: UserManagementView,
+          meta: {
+            title: 'User Management',
             allowedRoles: ['ADMIN'],
           },
         },

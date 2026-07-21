@@ -61,6 +61,12 @@ const menuItems: MenuItem[] = [
     icon: DataAnalysis,
   },
   {
+    label: 'User Management',
+    path: '/users',
+    icon: UserFilled,
+    allowedRoles: ['ADMIN'],
+  },
+  {
     label: 'Audit',
     path: '/audit',
     icon: Document,
