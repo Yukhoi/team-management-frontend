@@ -137,6 +137,19 @@ const hasMatchData = computed(() => {
   )
 })
 const appearances = computed(() => match.value?.appearances ?? [])
+const selectedAppearancePlayerIds = computed(() => {
+  return new Set(
+    appearanceRows.value
+      .map((row) => row.playerId)
+      .filter((playerId): playerId is number => playerId !== undefined),
+  )
+})
+const hasAvailableAppearancePlayers = computed(() => {
+  return players.value.some(
+    (player) =>
+      player.id !== undefined && !selectedAppearancePlayerIds.value.has(player.id),
+  )
+})
 const eligibleGoalPlayers = computed<GoalPlayerOption[]>(() => {
   const playersById = new Map<number, GoalPlayerOption>()
 
@@ -241,6 +254,30 @@ function formatGoalPlayerLabel(player: GoalPlayerOption): string {
     : player.playerName
 }
 
+function comparePlayersByName(left: PlayerResponse, right: PlayerResponse): number {
+  return (left.name ?? '').localeCompare(right.name ?? '', ['en', 'zh'], {
+    sensitivity: 'base',
+  })
+}
+
+function getAvailablePlayersForRow(currentRow: AppearanceRow): PlayerResponse[] {
+  const currentPlayerId = currentRow.playerId
+  const selectedByOtherRows = new Set(
+    appearanceRows.value
+      .filter((row) => row !== currentRow)
+      .map((row) => row.playerId)
+      .filter((playerId): playerId is number => playerId !== undefined),
+  )
+
+  return players.value
+    .filter(
+      (player) =>
+        player.id !== undefined &&
+        (player.id === currentPlayerId || !selectedByOtherRows.has(player.id)),
+    )
+    .sort(comparePlayersByName)
+}
+
 function syncAppearancePlayer(row: AppearanceRow): void {
   const player = players.value.find((item) => item.id === row.playerId)
 
@@ -335,6 +372,11 @@ function openAppearanceDialog(): void {
 }
 
 function addAppearanceRow(): void {
+  if (!hasAvailableAppearancePlayers.value) {
+    ElMessage.warning('All available players have already been selected.')
+    return
+  }
+
   appearanceRows.value.push({
     playerNameSnapshot: '',
     starter: false,
@@ -344,6 +386,14 @@ function addAppearanceRow(): void {
 
 function removeAppearanceRow(index: number): void {
   appearanceRows.value.splice(index, 1)
+}
+
+function hasDuplicateAppearancePlayers(): boolean {
+  const playerIds = appearanceRows.value
+    .map((row) => row.playerId)
+    .filter((playerId): playerId is number => playerId !== undefined)
+
+  return new Set(playerIds).size !== playerIds.length
 }
 
 function buildAppearancePayload(): PlayerAppearanceRequest[] | null {
@@ -370,6 +420,11 @@ function buildAppearancePayload(): PlayerAppearanceRequest[] | null {
 }
 
 async function submitAppearances(): Promise<void> {
+  if (hasDuplicateAppearancePlayers()) {
+    ElMessage.error('A player cannot appear more than once.')
+    return
+  }
+
   const playersPayload = buildAppearancePayload()
 
   if (!playersPayload) {
@@ -844,15 +899,15 @@ onMounted(async () => {
             <el-select
               v-model="row.playerId"
               :loading="playersLoading"
+              clearable
               filterable
               @change="syncAppearancePlayer(row)"
             >
               <el-option
-                v-for="player in players"
+                v-for="player in getAvailablePlayersForRow(row)"
                 :key="player.id"
                 :label="player.name"
                 :value="player.id"
-                :disabled="!player.id"
               />
             </el-select>
           </template>
@@ -889,9 +944,20 @@ onMounted(async () => {
         </el-table-column>
       </el-table>
 
-      <el-button class="match-detail__add-row" plain @click="addAppearanceRow">
+      <el-button
+        class="match-detail__add-row"
+        :disabled="!hasAvailableAppearancePlayers"
+        plain
+        @click="addAppearanceRow"
+      >
         Add Player
       </el-button>
+      <div
+        v-if="!hasAvailableAppearancePlayers"
+        class="match-detail__form-tip"
+      >
+        All available players have already been selected.
+      </div>
 
       <template #footer>
         <el-button
