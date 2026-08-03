@@ -61,6 +61,12 @@ interface GoalFormState {
   remark: string
 }
 
+interface GoalPlayerOption {
+  playerId: number
+  playerName: string
+  jerseyNumber?: number | null
+}
+
 interface AssistFormState {
   playerId?: number
   assistMinute?: number
@@ -131,6 +137,33 @@ const hasMatchData = computed(() => {
   )
 })
 const appearances = computed(() => match.value?.appearances ?? [])
+const eligibleGoalPlayers = computed<GoalPlayerOption[]>(() => {
+  const playersById = new Map<number, GoalPlayerOption>()
+
+  for (const appearance of appearances.value) {
+    if (
+      appearance.appeared !== true ||
+      !appearance.playerId ||
+      !appearance.playerNameSnapshot
+    ) {
+      continue
+    }
+
+    if (!playersById.has(appearance.playerId)) {
+      playersById.set(appearance.playerId, {
+        playerId: appearance.playerId,
+        playerName: appearance.playerNameSnapshot,
+        jerseyNumber: appearance.jerseyNumberSnapshot,
+      })
+    }
+  }
+
+  return Array.from(playersById.values()).sort((left, right) =>
+    left.playerName.localeCompare(right.playerName, ['en', 'zh'], {
+      sensitivity: 'base',
+    }),
+  )
+})
 const goalDialogTitle = computed(() =>
   goalDialogMode.value === 'create' ? 'Add Goal' : 'Edit Goal',
 )
@@ -200,6 +233,12 @@ function getAssistPlayerId(goal: GoalResponse): number | undefined {
 
 function getAssistPlayerName(goal: GoalResponse): string {
   return goal.assist?.playerNameSnapshot ?? goal.assistPlayerNameSnapshot ?? ''
+}
+
+function formatGoalPlayerLabel(player: GoalPlayerOption): string {
+  return player.jerseyNumber !== undefined && player.jerseyNumber !== null
+    ? `${player.jerseyNumber} - ${player.playerName}`
+    : player.playerName
 }
 
 function syncAppearancePlayer(row: AppearanceRow): void {
@@ -354,12 +393,25 @@ async function submitAppearances(): Promise<void> {
 }
 
 function openCreateGoalDialog(): void {
+  if (loading.value) {
+    return
+  }
+
+  if (eligibleGoalPlayers.value.length === 0) {
+    ElMessage.warning('Please configure match appearances before adding a goal.')
+    return
+  }
+
   goalDialogMode.value = 'create'
   resetGoalForm()
   goalDialogVisible.value = true
 }
 
 function openEditGoalDialog(goal: GoalResponse): void {
+  if (loading.value) {
+    return
+  }
+
   goalDialogMode.value = 'edit'
   resetGoalForm()
   editingGoalId.value = getGoalId(goal)
@@ -384,7 +436,7 @@ function buildGoalPayload(): CreateGoalRequest | UpdateGoalRequest | null {
 }
 
 async function submitGoal(): Promise<void> {
-  if (!goalFormRef.value) {
+  if (!goalFormRef.value || loading.value) {
     return
   }
 
@@ -398,6 +450,16 @@ async function submitGoal(): Promise<void> {
 
   if (!payload) {
     ElMessage.error('Goal player is required')
+    return
+  }
+
+  const isEligiblePlayer = eligibleGoalPlayers.value.some(
+    (player) => player.playerId === goalForm.playerId,
+  )
+
+  if (!isEligiblePlayer) {
+    goalForm.playerId = undefined
+    ElMessage.error('Please configure match appearances before adding a goal.')
     return
   }
 
@@ -442,6 +504,10 @@ async function deleteGoalWithConfirm(goal: GoalResponse): Promise<void> {
 }
 
 function openAssistDialog(goal: GoalResponse): void {
+  if (loading.value) {
+    return
+  }
+
   resetAssistForm()
   editingAssistGoal.value = goal
   assistDialogMode.value = getAssistPlayerId(goal) ? 'edit' : 'create'
@@ -464,7 +530,7 @@ function buildAssistPayload(): UpsertAssistRequest | null {
 }
 
 async function submitAssist(): Promise<void> {
-  if (!assistFormRef.value || !editingAssistGoal.value) {
+  if (!assistFormRef.value || !editingAssistGoal.value || loading.value) {
     return
   }
 
@@ -483,6 +549,16 @@ async function submitAssist(): Promise<void> {
 
   if (!payload) {
     ElMessage.error('Assist player is required')
+    return
+  }
+
+  const isEligiblePlayer = eligibleGoalPlayers.value.some(
+    (player) => player.playerId === assistForm.playerId,
+  )
+
+  if (!isEligiblePlayer) {
+    assistForm.playerId = undefined
+    ElMessage.error('Please configure match appearances before adding an assist.')
     return
   }
 
@@ -691,7 +767,7 @@ onMounted(async () => {
               <el-button
                 v-if="canManageEvents"
                 type="primary"
-                :disabled="playersLoading"
+                :disabled="loading"
                 @click="openCreateGoalDialog"
               >
                 Add Goal
@@ -843,15 +919,25 @@ onMounted(async () => {
     >
       <el-form ref="goalFormRef" :model="goalForm" :rules="goalRules" label-position="top">
         <el-form-item label="Player" prop="playerId">
-          <el-select v-model="goalForm.playerId" :loading="playersLoading" filterable>
+          <el-select
+            v-model="goalForm.playerId"
+            :loading="loading"
+            filterable
+            no-data-text="No appearance players available"
+          >
             <el-option
-              v-for="player in players"
-              :key="player.id"
-              :label="player.name"
-              :value="player.id"
-              :disabled="!player.id"
+              v-for="player in eligibleGoalPlayers"
+              :key="player.playerId"
+              :label="formatGoalPlayerLabel(player)"
+              :value="player.playerId"
             />
           </el-select>
+          <div
+            v-if="eligibleGoalPlayers.length === 0"
+            class="match-detail__form-tip"
+          >
+            Please configure match appearances before adding a goal.
+          </div>
         </el-form-item>
 
         <el-form-item label="Goal Minute" prop="goalMinute">
@@ -878,7 +964,12 @@ onMounted(async () => {
         <el-button :disabled="goalSubmitting" @click="goalDialogVisible = false">
           Cancel
         </el-button>
-        <el-button type="primary" :loading="goalSubmitting" @click="submitGoal">
+        <el-button
+          type="primary"
+          :disabled="loading || eligibleGoalPlayers.length === 0"
+          :loading="goalSubmitting"
+          @click="submitGoal"
+        >
           Submit
         </el-button>
       </template>
@@ -898,13 +989,18 @@ onMounted(async () => {
         label-position="top"
       >
         <el-form-item label="Player" prop="playerId">
-          <el-select v-model="assistForm.playerId" :loading="playersLoading" filterable>
+          <el-select
+            v-model="assistForm.playerId"
+            :loading="loading"
+            filterable
+            no-data-text="No appearance players available"
+          >
             <el-option
-              v-for="player in players"
-              :key="player.id"
-              :label="player.name"
-              :value="player.id"
-              :disabled="!player.id"
+              v-for="player in eligibleGoalPlayers"
+              :key="player.playerId"
+              :label="formatGoalPlayerLabel(player)"
+              :value="player.playerId"
+              :disabled="player.playerId === editingAssistGoal?.playerId"
             />
           </el-select>
         </el-form-item>
@@ -922,7 +1018,12 @@ onMounted(async () => {
         <el-button :disabled="assistSubmitting" @click="assistDialogVisible = false">
           Cancel
         </el-button>
-        <el-button type="primary" :loading="assistSubmitting" @click="submitAssist">
+        <el-button
+          type="primary"
+          :disabled="loading || eligibleGoalPlayers.length === 0"
+          :loading="assistSubmitting"
+          @click="submitAssist"
+        >
           Submit
         </el-button>
       </template>
@@ -954,6 +1055,13 @@ onMounted(async () => {
 
   &__add-row {
     margin-top: 16px;
+  }
+
+  &__form-tip {
+    margin-top: 8px;
+    color: var(--el-color-warning);
+    font-size: 13px;
+    line-height: 1.4;
   }
 
   h1 {
