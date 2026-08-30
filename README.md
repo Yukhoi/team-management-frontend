@@ -1,57 +1,193 @@
-# Team Management System
+# Team Management Frontend
 
-> A football team operations platform built with Spring Boot microservices and a Vue 3 administration frontend.
+Vue 3 and TypeScript administration frontend for a football team management platform.
 
-Team Management System is designed for managing **one club/team and the tournaments it participates in**. It is not a league-wide public platform. The system focuses on day-to-day football operations: team records, players, tournaments, matches, appearances, goals, assists, statistics, audit logs, authentication, and role-based access control.
-
-![Vue](https://img.shields.io/badge/Vue-3-42b883)
+![Vue 3](https://img.shields.io/badge/Vue-3-42b883)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6.x-3178c6)
 ![Vite](https://img.shields.io/badge/Vite-8.x-646cff)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-Microservices-6db33f)
-![OpenAPI](https://img.shields.io/badge/OpenAPI-Contract--Driven-6ba539)
+![Pinia](https://img.shields.io/badge/Pinia-3.x-f7d336)
+![Element Plus](https://img.shields.io/badge/Element%20Plus-2.x-409eff)
+![Axios](https://img.shields.io/badge/Axios-1.x-5a29e4)
+![GitHub Pages](https://img.shields.io/badge/Hosting-GitHub%20Pages-222222)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
----
+| Link | URL |
+| --- | --- |
+| Live Demo | https://yukhoi.github.io/team-management-frontend/ |
+| Backend API | https://yexiaoparis-management.duckdns.org |
+| Backend Repository | To be added. The frontend repository does not currently confirm the backend repository URL. |
 
-## 1. Project Overview
+## Project Overview
 
-Team Management System is a full-stack football team management platform using a **Spring Boot microservices backend** and a **Vue 3 + TypeScript frontend**.
+Team Management Frontend is a football club administration UI. It is designed for managing one club and its operational data, not for running a public league platform.
 
-The platform helps a football team manage:
+The application helps staff:
 
-- Team and player information
-- Tournament participation
-- Match scheduling and result recording
-- Player appearances
-- Goal and assist tracking
-- Statistics dashboards and leaderboards
-- Audit logging for operational traceability
-- JWT authentication and RBAC authorization
+- Manage the club and its players
+- Manage tournaments and matches
+- Record appearances, goals, and assists
+- View statistics and leaderboards
+- Export leaderboard PDFs
+- Manage users and roles
+- Review audit logs
 
-### Technical Highlights
+The frontend is hosted on GitHub Pages and calls the production backend through a remote HTTPS Gateway.
 
-- 🧩 Microservice-oriented backend boundaries
-- 🔐 JWT authentication with role-based access control
-- 📘 OpenAPI contract-driven frontend API layer
-- ⚡ Vue 3 Composition API with TypeScript
-- 📊 Statistics projection views for dashboard and leaderboards
-- 🧾 Audit log module with JSON event data viewer
-- 📨 Event-driven architecture with Kafka-oriented service integration
-- 🐳 Docker-ready deployment model for infrastructure and backend services
+## Current Architecture
 
----
+```mermaid
+flowchart LR
+  Browser["Browser"]
+  Pages["GitHub Pages<br/>Static Vue build"]
+  Router["Vue Router<br/>Hash History"]
+  Layout["MainLayout"]
+  Views["Feature Views"]
+  Store["Pinia Auth Store"]
+  Api["API Layer<br/>src/api"]
+  Axios["Axios HTTP Client"]
+  Gateway["HTTPS Gateway<br/>yexiaoparis-management.duckdns.org"]
+  Identity["Identity Service"]
+  Team["Team Service"]
+  Tournament["Tournament Service"]
+  Match["Match Service"]
+  Statistics["Statistics Service"]
+  Audit["Audit Service"]
 
-## 2. Features
+  Browser --> Pages
+  Pages --> Router
+  Router --> Layout
+  Layout --> Views
+  Store --> Router
+  Store --> Api
+  Views --> Store
+  Views --> Api
+  Api --> Axios
+  Axios --> Gateway
+  Gateway --> Identity
+  Gateway --> Team
+  Gateway --> Tournament
+  Gateway --> Match
+  Gateway --> Statistics
+  Gateway --> Audit
+```
 
-### Authentication
+GitHub Pages serves static assets only. It is not an API proxy; the browser calls the HTTPS Gateway directly.
 
-- [x] Login page
-- [x] JWT authentication
-- [x] Access token and refresh token persistence
-- [x] Current user loading
-- [x] Session restore after browser refresh
+## Tech Stack
+
+| Area | Technology |
+| --- | --- |
+| Framework | Vue 3 |
+| Language | TypeScript |
+| Build Tool | Vite |
+| UI Library | Element Plus |
+| Icons | @element-plus/icons-vue |
+| State Management | Pinia |
+| Routing | Vue Router |
+| HTTP Client | Axios |
+| Styling | Sass |
+| PDF Generation | pdf-lib |
+| PDF Font Support | @pdf-lib/fontkit |
+| API Contract | OpenAPI JSON files |
+| Hosting | GitHub Pages |
+| CI/CD | GitHub Actions |
+
+## Key Engineering Decisions
+
+### OpenAPI-driven frontend
+
+Backend contracts are stored in `openapi/`:
+
+```text
+openapi/
+├── audit.json
+├── identity.json
+├── match.json
+├── statistics.json
+├── team.json
+└── tournament.json
+```
+
+Contract update workflow:
+
+```text
+Update backend
+→ Export OpenAPI
+→ Replace contract file
+→ Update TypeScript types
+→ Update API layer
+→ Update affected views
+```
+
+### API Layer
+
+Views do not call Axios directly. API requests are centralized in `src/api/`:
+
+```text
+src/api/
+├── audit.ts
+├── auth.ts
+├── http.ts
+├── index.ts
+├── match.ts
+├── player.ts
+├── statistics.ts
+├── team.ts
+└── tournament.ts
+```
+
+`src/api/http.ts` configures the base URL, JSON headers, JWT `Authorization` header, and global `401` / `403` response handling.
+
+### Role-based access control
+
+Supported role codes:
+
+| Role | Usage |
+| --- | --- |
+| `ADMIN` | Full administration, including users and audit logs |
+| `COACH` | Business-data management |
+| `PLAYER` | Read-oriented access |
+
+Frontend RBAC controls route access, menu visibility, and write-action visibility. The Gateway and backend services remain the authoritative security layer.
+
+### GitHub Pages routing
+
+The router uses:
+
+```ts
+createWebHashHistory(import.meta.env.BASE_URL)
+```
+
+Production URLs therefore use hash routes, for example:
+
+```text
+https://yukhoi.github.io/team-management-frontend/#/matches
+```
+
+Hash History avoids GitHub Pages deep-link refresh `404` errors.
+
+## Implemented Features
+
+### Authentication and Account
+
+- [x] Login
+- [x] Access and refresh token persistence in `localStorage`
+- [x] Current-user restoration on app startup
 - [x] Logout
-- [x] 401 handling with automatic logout
+- [x] Route guards
+- [x] Role-aware menu visibility
+- [x] Access Denied page
+- [x] Not Found page
+- [x] Change Password
+
+### Dashboard
+
+- [x] Current username and roles
+- [x] Total matches, wins, draws, losses
+- [x] Goals and goals against
+- [x] Top scorer and top scorer goals
+- [x] Top assist player and assist count
+- [x] Loading, empty, error, and retry states
 
 ### Team Management
 
@@ -60,8 +196,8 @@ The platform helps a football team manage:
 - [x] Create team
 - [x] Update team
 - [x] Backend pagination
-- [x] ADMIN / COACH write access
-- [x] PLAYER read-only access
+- [x] Club-own-team lookup through `GET /api/teams/our`
+- [x] `ADMIN` / `COACH` write-action visibility
 
 ### Player Management
 
@@ -69,10 +205,10 @@ The platform helps a football team manage:
 - [x] Player detail
 - [x] Create player
 - [x] Update player
-- [x] Change player status
+- [x] Player status change
 - [x] Backend pagination
-- [x] ADMIN / COACH write access
-- [x] PLAYER read-only access
+- [x] Automatic assignment to the club's own team during player creation
+- [x] `ADMIN` / `COACH` write-action visibility
 
 ### Tournament Management
 
@@ -89,628 +225,352 @@ The platform helps a football team manage:
 - [x] Match list
 - [x] Match detail
 - [x] Create match
-- [x] Update match result
+- [x] Update result
 - [x] Appearance management
 - [x] Goal management
 - [x] Assist management
-- [x] Delete goal
-- [x] Delete assist
-- [x] Confirmation for destructive operations
+- [x] Delete goal and assist with confirmation
+- [x] Our team is loaded automatically
+- [x] Opponent team is selected by name from team records
+- [x] Team snapshots are generated from short names when available
+- [x] Goal and assist player options are restricted to match appearances
+- [x] Player options are sorted alphabetically
+- [x] Appearance editor avoids duplicate player selection
 
 ### Statistics
 
-- [x] Dashboard overview
+- [x] Dashboard statistics
 - [x] Match statistics
 - [x] Player statistics
 - [x] Team statistics
 - [x] Leaderboards
-- [x] Filterable statistics views
-- [x] Loading / error / empty states
+- [x] Season filter for player statistics and leaderboards
+- [x] Tournament-name filter for player statistics and leaderboards
+- [x] Tournament ID filter for match and team statistics
+- [x] Board type filter for leaderboards
+- [x] Top N filter for leaderboards
+- [x] Automatic refresh for player-statistics filter changes
+- [x] Initial automatic load for dashboard, match statistics, team statistics, player statistics, and leaderboards
+
+### PDF Export
+
+The leaderboard export follows the project rule:
+
+```text
+What You See Is What You Export
+```
+
+- [x] Fixed PDF template
+- [x] Scorer leaderboard export
+- [x] Assist leaderboard export
+- [x] Appearance leaderboard export
+- [x] Current filter context determines export content
+- [x] Dynamic title from club name, season, tournament, and board type
+- [x] Appearance count in scorer and assist PDFs
+- [x] Chinese text support
+- [x] Public asset path support for GitHub Pages subpaths
+
+### User Management
+
+- [x] User list
+- [x] Create user
+- [x] Status update
+- [x] Role update
+- [x] Password reset
+- [x] Search, role filter, and status filter in the current page data
+- [x] `ADMIN`-only route and menu access
 
 ### Audit
 
-- [x] Audit log list
-- [x] Audit log detail
-- [x] Audit filters
-- [x] Event JSON viewer
-- [x] Access restricted to ADMIN in the frontend
-- [x] 403 Access Denied page
+- [x] Audit list
+- [x] Audit detail
+- [x] Filter by service, operation, resource type, keyword, and time range
+- [x] JSON payload display
+- [x] `ADMIN`-only route and menu access
 
----
-
-## 3. Architecture
-
-```mermaid
-flowchart LR
-  Browser["Browser"]
-  Frontend["Vue 3 Frontend<br/>Vite + TypeScript + Element Plus"]
-  Gateway["Gateway<br/>local: localhost:8088<br/>production: yexiaoparis-management.duckdns.org"]
-
-  Identity["Identity Service<br/>localhost:8087"]
-  Team["Team Service<br/>localhost:8082"]
-  Tournament["Tournament Service<br/>localhost:8085"]
-  Match["Match Service<br/>localhost:8084"]
-  Statistics["Statistics Service<br/>localhost:8086"]
-  Audit["Audit Service<br/>localhost:8083"]
-
-  PostgreSQL[("PostgreSQL<br/>multi-schema database")]
-  Kafka[("Kafka<br/>domain events")]
-  Redis[("Redis<br/>cache / token / gateway support")]
-
-  Browser --> Frontend
-  Frontend --> Gateway
-
-  Gateway --> Identity
-  Gateway --> Team
-  Gateway --> Tournament
-  Gateway --> Match
-  Gateway --> Statistics
-  Gateway --> Audit
-
-  Identity --> PostgreSQL
-  Team --> PostgreSQL
-  Tournament --> PostgreSQL
-  Match --> PostgreSQL
-  Statistics --> PostgreSQL
-  Audit --> PostgreSQL
-
-  Match --> Kafka
-  Team --> Kafka
-  Tournament --> Kafka
-  Kafka --> Statistics
-  Kafka --> Audit
-
-  Gateway --> Redis
-  Identity --> Redis
-```
-
-The frontend never calls individual service ports directly. All API requests go through the backend gateway:
+## Project Structure
 
 ```text
-Local:      http://localhost:8088
-Production: http://yexiaoparis-management.duckdns.org
+src/
+├── api/                 # HTTP client and domain API functions
+├── components/common/   # Shared Vue components
+├── generated/           # Generated OpenAPI client artifacts
+├── layouts/             # Authenticated application layout
+├── router/              # Route table and navigation guards
+├── services/export/     # PDF export and browser download utilities
+├── stores/              # Pinia stores
+├── styles/              # Global styles
+├── types/               # TypeScript DTO and API response types
+├── utils/               # Tokens, permissions, and public asset helpers
+└── views/               # Page-level modules
+
+openapi/                 # Backend OpenAPI contracts
+public/fonts/            # Optional PDF font assets and font notes
+public/templates/        # Static PDF templates
+.github/workflows/       # GitHub Pages deployment workflow
 ```
 
----
-
-## 4. Microservices
-
-| Service | Local Port | Responsibility | Key APIs |
-| --- | ---: | --- | --- |
-| Gateway Service | `8088` | Unified API entry, routing, auth enforcement, user context propagation | Proxies all `/api/**` requests |
-| Identity Service | `8087` | Authentication, JWT, users, roles, current user profile | `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/logout`, `GET /api/roles`, `/api/users/**` |
-| Team Service | `8082` | Team and player management | `GET /api/teams`, `GET /api/teams/{id}`, `POST /api/teams`, `PUT /api/teams/{id}`, `GET /api/players`, `PATCH /api/players/{id}/status` |
-| Tournament Service | `8085` | Tournament lifecycle management | `GET /api/tournaments`, `POST /api/tournaments`, `PUT /api/tournaments/{id}`, `PATCH /api/tournaments/{id}/finish`, `PATCH /api/tournaments/{id}/cancel` |
-| Match Service | `8084` | Match scheduling, results, appearances, goals, assists | `GET /api/v1/matches`, `POST /api/v1/matches`, `PATCH /api/v1/matches/{id}/result`, `PUT /api/v1/matches/{id}/appearances`, `/api/v1/goals/**` |
-| Statistics Service | `8086` | Read-optimized projections, dashboard, leaderboards | `GET /api/statistics/dashboard`, `/matches`, `/players`, `/teams`, `/leaderboards` |
-| Audit Service | `8083` | Audit operation log query and event data inspection | `GET /api/audit/logs`, `GET /api/audit/logs/{id}` |
-
----
-
-## 5. Event-Driven Architecture
-
-The system is designed around service ownership and asynchronous propagation of domain changes.
-
-### Kafka Event Flow
-
-- **Producers**: services that own write operations, such as Match, Team, and Tournament.
-- **Consumers**: Statistics and Audit services consume events to build read models and operation logs.
-- **Outbox Pattern**: write-side services can persist domain changes and event records atomically before publishing.
-- **Idempotent Consumer**: consumers should process repeated events safely using event IDs or processed-message records.
+## Authentication Flow
 
 ```mermaid
 sequenceDiagram
   participant User
-  participant FE as Vue Frontend
-  participant GW as Gateway
-  participant Match as Match Service
-  participant DB as PostgreSQL
-  participant Kafka
-  participant Stats as Statistics Service
-  participant Audit as Audit Service
+  participant Login as Login View
+  participant Store as Pinia Auth Store
+  participant API as API Layer
+  participant Gateway as HTTPS Gateway
+  participant Router as Vue Router
+  participant Dashboard as Dashboard View
 
-  User->>FE: Record goal / assist / result
-  FE->>GW: Authenticated API request
-  GW->>Match: Forward request with user context
-  Match->>DB: Save domain data + outbox event
-  Match->>Kafka: Publish domain event
-  Kafka->>Stats: Consume event
-  Stats->>DB: Update statistics projection
-  Kafka->>Audit: Consume event
-  Audit->>DB: Save operation log
+  User->>Login: Submit username and password
+  Login->>Store: login(payload)
+  Store->>API: POST /api/auth/login
+  API->>Gateway: Auth request
+  Gateway-->>API: Access token + refresh token
+  API-->>Store: Login response
+  Store->>Store: Store tokens
+  Store->>API: GET /api/auth/me
+  API->>Gateway: Current user request
+  Gateway-->>API: Current user
+  API-->>Store: User profile
+  Store->>Router: Navigate
+  Router->>Dashboard: Open dashboard
 ```
 
-This design keeps business writes focused in the owning service while allowing Statistics and Audit to evolve as independent read models.
+On application startup, `src/main.ts` calls `restoreAuth()` before mounting the router. Global Axios handling logs the user out and redirects to `/login` on `401`; it shows an access error and redirects to `/403` on `403`.
 
----
+## Environment Configuration
 
-## 6. Database Design
-
-### Multi-Schema PostgreSQL Architecture
-
-The backend is organized as a multi-schema PostgreSQL architecture:
-
-```text
-PostgreSQL
-├── identity
-├── team
-├── tournament
-├── match
-├── statistics
-└── audit
-```
-
-### Why No Cross-Service Foreign Keys?
-
-Microservices should own their data. Cross-service foreign keys create hidden runtime coupling and make independent deployment, migration, and scaling harder.
-
-Instead of database-level coupling:
-
-- Services reference external entities by ID.
-- User-facing names are stored as snapshots when needed.
-- Consistency across services is maintained through APIs and domain events.
-
-### Why Use Snapshots?
-
-Match and statistics records often need historical truth. For example, a player name or tournament name may change later, but historical match records should still display the name as it was when the match happened.
-
-Snapshot fields solve this:
-
-- `playerNameSnapshot`
-- `jerseyNumberSnapshot`
-- `tournamentNameSnapshot`
-- `seasonSnapshot`
-- `ourTeamNameSnapshot`
-- `opponentTeamNameSnapshot`
-
----
-
-## 7. Security
-
-### JWT Authentication
-
-The frontend authenticates through the Identity Service via the Gateway. After login, the frontend stores:
-
-- `accessToken`
-- `refreshToken`
-- `currentUser`
-
-Authentication state is restored on browser refresh by calling:
-
-```http
-GET /api/auth/me
-```
-
-### RBAC Authorization
-
-Role-based access control is enforced by the backend and reflected in the frontend UI.
-
-| Role | Permission Model |
-| --- | --- |
-| `ADMIN` | Full system access, including Audit |
-| `COACH` | Business write access, no Audit access in frontend |
-| `PLAYER` | Read-only access to business data |
-
-### Gateway Validation
-
-The Gateway is the unified API entry and should validate tokens before forwarding requests.
-
-### User Context Headers
-
-After authentication, the Gateway can propagate user context to downstream services, such as:
-
-```text
-X-User-Id
-X-Username
-X-Roles
-```
-
-Downstream services can use this context for authorization, audit logging, and event metadata.
-
----
-
-## 8. Frontend
-
-The frontend is implemented as a Vue 3 administration application.
-
-### Frontend Stack
-
-- Vue 3 Composition API
-- TypeScript
-- Vite
-- Vue Router
-- Pinia
-- Axios
-- Element Plus
-- SCSS
-
-### Frontend Capabilities
-
-- Protected routes
-- JWT session restore
-- Role-aware sidebar
-- 403 Access Denied page
-- 404 Not Found page
-- Global Axios error handling
-- API layer aligned with OpenAPI contracts
-- Shared UI primitives for loading, empty, error, header, and card layouts
-
-### Screenshots
-
-Coming Soon
-
----
-
-## 9. API Documentation
-
-API contracts are stored in:
-
-```text
-openapi/
-```
-
-Current OpenAPI files:
-
-| Contract | Service |
-| --- | --- |
-| `identity.json` | Identity Service |
-| `team.json` | Team Service and Player APIs |
-| `tournament.json` | Tournament Service |
-| `match.json` | Match Service |
-| `statistics.json` | Statistics Service |
-| `audit.json` | Audit Service |
-
-### OpenAPI Contract-Driven Development
-
-The frontend API layer and TypeScript DTOs are implemented from the OpenAPI contracts. When backend contracts change, frontend types and API calls should be updated from the contract first, not from guessed response shapes.
-
-Example frontend API modules:
-
-```text
-src/api/
-├── auth.ts
-├── team.ts
-├── player.ts
-├── tournament.ts
-├── match.ts
-├── statistics.ts
-└── audit.ts
-```
-
-Swagger UI availability depends on the backend runtime configuration. Typical Spring Boot OpenAPI endpoints are:
-
-```text
-http://localhost:<service-port>/swagger-ui.html
-http://localhost:<service-port>/v3/api-docs
-```
-
----
-
-## 10. Tech Stack
-
-| Layer | Technologies |
-| --- | --- |
-| Backend | Spring Boot Microservices, Spring Security, OpenAPI |
-| Frontend | Vue 3, TypeScript, Vite, Pinia, Vue Router, Element Plus |
-| Database | PostgreSQL, multi-schema service ownership |
-| Messaging | Kafka |
-| Caching | Redis |
-| Infrastructure | Gateway, Docker-ready service topology |
-| DevOps | Docker Compose-oriented local deployment, production build pipeline |
-| API Contract | Swagger / OpenAPI |
-
----
-
-## 11. Getting Started
-
-### Prerequisites
-
-Install the following tools:
-
-- Node.js 20+
-- npm
-- Java 17+
-- Docker
-- Docker Compose
-- PostgreSQL
-- Redis
-- Kafka
-
-For frontend-only development, Node.js and a running backend Gateway are enough.
-
----
-
-## 12. Local Development
-
-### Frontend
-
-The local Vite environment uses `.env.development`:
+Vite exposes only variables prefixed with `VITE_` to the frontend. Do not put secrets in frontend environment files.
 
 ```env
+# .env.development
 VITE_API_BASE_URL=http://localhost:8088
 ```
 
-Install dependencies:
-
-```bash
-npm install
+```env
+# .env.production
+VITE_API_BASE_URL=https://yexiaoparis-management.duckdns.org
 ```
 
-Start the Vite dev server:
+Vite production mode uses `.env.production`, and the GitHub Actions deployment also sets `VITE_API_BASE_URL` during the build.
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 22 is used by the GitHub Actions workflow
+- npm
+- A running backend Gateway
+
+### Installation
+
+```bash
+git clone https://github.com/Yukhoi/team-management-frontend.git
+cd team-management-frontend
+npm ci
+```
+
+### Development
 
 ```bash
 npm run dev
 ```
 
-Frontend URL:
-
-```text
-http://localhost:5173
-```
-
-### Backend
-
-Start backend services from the backend workspace. This frontend repository expects the Gateway to be available at:
-
-```text
-http://localhost:8088
-```
-
-Service ports from the OpenAPI contracts:
-
-```text
-Team Service         8082
-Audit Service        8083
-Match Service        8084
-Tournament Service   8085
-Statistics Service   8086
-Identity Service     8087
-Gateway              8088
-```
-
-### Docker
-
-This frontend repository does not currently include Docker Compose files. In the full system workspace, Docker Compose should start:
-
-- PostgreSQL
-- Redis
-- Kafka
-- Gateway
-- Identity Service
-- Team Service
-- Tournament Service
-- Match Service
-- Statistics Service
-- Audit Service
-
-Common command shape:
-
-```bash
-docker compose up -d
-```
-
-### Gateway
-
-All frontend API requests must go through the Gateway:
-
-```text
-VITE_API_BASE_URL=http://localhost:8088
-```
-
-Do not configure the frontend to call service ports such as `8087`, `8084`, or `8086` directly.
-
----
-
-## 13. Environment Variables
-
-### Frontend
-
-The frontend reads its backend gateway URL from `VITE_API_BASE_URL`. Vite loads the correct file by mode:
-
-| File | Mode | Backend Gateway URL |
-| --- | --- | --- |
-| `.env.development` | Local development | `http://localhost:8088` |
-| `.env.production` | Production build | `http://yexiaoparis-management.duckdns.org` |
-
-Local development:
-
-```env
-VITE_API_BASE_URL=http://localhost:8088
-```
-
-Production:
-
-```env
-VITE_API_BASE_URL=http://yexiaoparis-management.duckdns.org
-```
-
-Only public frontend configuration belongs in committed Vite env files. Do not commit real passwords, JWT secrets, private tokens, `.env.local`, or secret production env files.
-
-### Gateway
-
-```env
-SERVER_PORT=8088
-JWT_SECRET=<replace-with-secure-secret>
-REDIS_HOST=localhost
-REDIS_PORT=6379
-```
-
-### Identity Service
-
-```env
-SERVER_PORT=8087
-DB_URL=jdbc:postgresql://localhost:5432/team_management
-DB_SCHEMA=identity
-DB_USERNAME=<db-user>
-DB_PASSWORD=<db-password>
-JWT_SECRET=<replace-with-secure-secret>
-```
-
-### Team / Tournament / Match / Statistics / Audit Services
-
-```env
-DB_URL=jdbc:postgresql://localhost:5432/team_management
-DB_USERNAME=<db-user>
-DB_PASSWORD=<db-password>
-KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-REDIS_HOST=localhost
-REDIS_PORT=6379
-```
-
-### Kafka
-
-```env
-KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-```
-
-### Redis
-
-```env
-REDIS_HOST=localhost
-REDIS_PORT=6379
-```
-
-Never commit real passwords, JWT secrets, production tokens, or cloud credentials.
-
----
-
-## 14. Build & Run
-
-### Frontend Build
-
-Production builds use `.env.production` and point API requests at:
-
-```text
-http://yexiaoparis-management.duckdns.org
-```
+### Production build
 
 ```bash
 npm run build
 ```
 
-Preview the production build locally:
+### Production preview
 
 ```bash
 npm run preview
 ```
 
-### Backend Build
+## Backend Requirements
 
-From the backend workspace:
-
-```bash
-./mvnw clean package
-```
-
-or, for Gradle-based services:
-
-```bash
-./gradlew build
-```
-
-### Docker Compose
-
-From the full system workspace:
-
-```bash
-docker compose up -d
-```
-
-### Production Compose
-
-A production compose setup should include:
-
-- Externalized environment variables
-- No hardcoded secrets
-- Frontend built with `VITE_API_BASE_URL=https://yexiaoparis-management.duckdns.org`
-- Persistent PostgreSQL volumes
-- Kafka and Redis health checks
-- Service restart policies
-- Gateway exposed publicly
-- Internal service ports kept private
-
-Example command shape:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-```
-
----
-
-## 15. Roadmap
-
-### Current Status
-
-- [x] Authentication
-- [x] RBAC-aware frontend navigation
-- [x] Team module
-- [x] Player module
-- [x] Tournament module
-- [x] Match module
-- [x] Appearance, goal, and assist management
-- [x] Statistics dashboard and leaderboards
-- [x] Audit log list and detail
-- [x] OpenAPI-aligned frontend API layer
-- [x] 403 and 404 pages
-- [x] Environment-based API URL
-
-### Future Plans
-
-- [ ] CI/CD pipeline
-- [ ] Prometheus metrics
-- [ ] Grafana dashboards
-- [ ] E2E testing
-- [ ] Unit tests for permission utilities
-- [ ] Global pagination component
-- [ ] More shared table and form components
-- [ ] Kubernetes deployment
-- [ ] Frontend screenshot documentation
-- [ ] Dark mode
-
----
-
-## 16. Project Status
+The deployed frontend expects the Gateway to be reachable at:
 
 ```text
-Backend          100%
-Frontend          90%
-Deployment        Ready
-Production        Ready for controlled environment
-Documentation     In Progress
+https://yexiaoparis-management.duckdns.org
 ```
 
-The frontend is functionally complete for the core management workflow. Remaining work is focused on broader UI polish, automated tests, observability, CI/CD, and production hardening.
+Backend requirements:
 
----
+- Gateway must be online
+- HTTPS certificate must be valid
+- CORS must allow `https://yukhoi.github.io`
+- Test accounts are not stored in this README
+- Swagger availability depends on backend configuration
 
-## 17. Why This Project
+## PDF Export Details
 
-This project demonstrates practical full-stack engineering across modern frontend and backend architecture.
+PDF export code lives in:
 
-For recruiters and interviewers, it highlights:
+```text
+src/services/export/
+├── download.ts
+├── leaderboardExporter.ts
+├── leaderboardMapper.ts
+├── pdfEngine.ts
+└── pdfTemplate.ts
+```
 
-- **Microservices**: clear service boundaries for identity, team, tournament, match, statistics, and audit.
-- **Event-Driven Architecture**: Kafka-oriented projection and audit workflows.
-- **CQRS-style Read Models**: statistics are served from dedicated query endpoints.
-- **JWT Authentication**: login, token persistence, session restore, and logout.
-- **RBAC Authorization**: ADMIN, COACH, and PLAYER behavior across UI and routes.
-- **OpenAPI-Driven Development**: frontend DTOs and API mappings are contract-aligned.
-- **Docker Deployment Readiness**: infrastructure-oriented local and production deployment model.
-- **Vue Frontend Engineering**: Composition API, Pinia state, Vue Router guards, Element Plus UI, and TypeScript.
-- **Operational Thinking**: audit logging, JSON event inspection, error states, access denied handling, and gateway-only API access.
+Static assets:
 
-The system is intentionally scoped to a real-world team operations domain: not a toy CRUD app, not a generic admin template, and not a league-wide product. It models a focused football management workflow with enough depth to show backend architecture, frontend ergonomics, and production-readiness concerns.
+```text
+public/templates/leaderboard-template.pdf
+public/fonts/
+```
 
----
+The template and optional Chinese font are resolved with `import.meta.env.BASE_URL`, so they work under the GitHub Pages subpath. `src/utils/publicAsset.ts` provides the same base-path-safe approach for other public assets.
 
-## 18. License
+The export engine first tries to load `public/fonts/NotoSansSC-Regular.ttf`. That font file is not currently committed. If the font is unavailable, non-ASCII text is rendered to PNG through browser canvas and embedded into the PDF.
 
-MIT License
+## Deployment to GitHub Pages
 
-Copyright (c) 2026
+Deployment is handled by:
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files, to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, subject to the following conditions:
+```text
+.github/workflows/deploy-pages.yml
+```
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+Workflow:
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```text
+Push to main
+→ npm ci
+→ npm run build
+→ Upload dist
+→ Deploy to GitHub Pages
+```
+
+Production URL:
+
+```text
+https://yukhoi.github.io/team-management-frontend/
+```
+
+`vite.config.ts` sets:
+
+```ts
+base: mode === 'production'
+  ? '/team-management-frontend/'
+  : '/'
+```
+
+The router uses Hash History for GitHub Pages compatibility.
+
+## Common Deployment Issues
+
+### Login returns 405 from github.io
+
+Cause: `VITE_API_BASE_URL` was missing during the production build.
+
+Wrong request:
+
+```text
+https://yukhoi.github.io/api/auth/login
+```
+
+Correct request:
+
+```text
+https://yexiaoparis-management.duckdns.org/api/auth/login
+```
+
+### CORS error
+
+The Gateway must allow:
+
+```text
+https://yukhoi.github.io
+```
+
+### PDF template returns 404
+
+Public assets must be resolved through `BASE_URL` or the `getPublicAsset()` helper so `/team-management-frontend/` is included in production.
+
+### Route refresh returns 404
+
+The project uses Hash History to avoid deep-route refresh errors on GitHub Pages.
+
+## Available Scripts
+
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start the Vite development server |
+| `npm run build` | Type-check the project and build production assets |
+| `npm run preview` | Preview the production build locally |
+
+## Testing and Quality
+
+Current quality tooling:
+
+| Area | Current State |
+| --- | --- |
+| Type checking | Included in `npm run build` through `vue-tsc -b` |
+| Unit tests | Not configured |
+| Component tests | Not configured |
+| E2E tests | Not configured |
+| ESLint | Not configured |
+| Prettier | Not configured |
+
+Automated frontend testing is planned.
+
+Manual regression focus areas:
+
+- Authentication and token restoration
+- RBAC route, menu, and action visibility
+- Team, player, tournament, and match CRUD flows
+- Match appearances, goals, and assists
+- Statistics filters and data loading
+- PDF export
+- GitHub Pages routing and public assets
+
+## Project Status
+
+| Module | Status |
+| --- | --- |
+| Authentication | Completed |
+| Team | Completed |
+| Player | Completed |
+| Tournament | Completed |
+| Match | Completed |
+| Statistics | Completed |
+| PDF Export | Completed |
+| User Management | Completed |
+| Audit | Completed |
+| Change Password | Completed |
+| GitHub Pages Deployment | Completed |
+| Automated Testing | Planned |
+| ESLint / Prettier Quality Gates | Planned |
+
+## Roadmap
+
+- Automated unit and component tests
+- End-to-end tests
+- Better mobile responsiveness
+- Monitoring and frontend error reporting
+- Accessibility improvements
+- More PDF reports
+- Custom domain
+- CI quality gates
+
+## Security Notes
+
+- No secrets belong in `VITE_*` variables
+- JWT access tokens are sent through the `Authorization` header
+- UI permission checks do not replace backend authorization
+- Passwords must never be committed or logged
+- The production Gateway uses HTTPS
+
+## Screenshots
+
+Screenshots will be added as the production UI is finalized.
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](./LICENSE).
