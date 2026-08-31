@@ -1,0 +1,15 @@
+export type {
+  AnalysisFinding,
+  ComparisonItem,
+  DataSource,
+  GeneratedOpponentReport,
+  LeaguePerformanceMetrics,
+  MatchContext,
+  OpponentAnalysisMetricsResponse,
+  OpponentAnalysisReportResponse,
+  Status,
+  TeamComparisonMetrics,
+  TeamPerformanceMetrics,
+  ThreatLevel,
+  Usage,
+} from '../generated/match'

@@ -18,6 +18,7 @@ import {
   updateMatchAppearances,
   upsertAssist,
 } from '../../api/match'
+import OpponentAnalysisPanel from '../../components/match/OpponentAnalysisPanel.vue'
 import { getPlayers } from '../../api/player'
 import { useAuthStore } from '../../stores/auth'
 import { canWriteBusinessData } from '../../utils/permission'
@@ -884,6 +885,10 @@ onMounted(async () => {
             </template>
           </el-table>
         </el-card>
+      </el-tab-pane>
+
+      <el-tab-pane label="Opponent Analysis" name="opponent-analysis" lazy>
+        <OpponentAnalysisPanel v-if="match" :match-id="matchId" :match="match" />
       </el-tab-pane>
     </el-tabs>
 
