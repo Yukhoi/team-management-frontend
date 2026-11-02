@@ -1,0 +1,108 @@
+// Shared application palette. Keep PDF templates independent of these UI tokens.
+:root {
+  --app-bg: #0d0d0d;
+  --app-surface: #171717;
+  --app-surface-elevated: #222222;
+  --app-border: #333333;
+  --app-primary: #f97316;
+  --app-primary-hover: #fb923c;
+  --app-primary-active: #ea580c;
+  --app-text-primary: #f5f5f5;
+  --app-text-regular: #d4d4d4;
+  --app-text-secondary: #a3a3a3;
+  --app-text-disabled: #666666;
+  --app-primary-subtle: color-mix(in srgb, var(--app-primary) 12%, var(--app-surface));
+  --app-primary-selected: color-mix(in srgb, var(--app-primary) 20%, var(--app-surface));
+}
+
+// Load after Element Plus' official dark stylesheet, including teleported UI.
+html.dark {
+  color-scheme: dark;
+  --el-color-primary: var(--app-primary);
+  --el-color-primary-rgb: 249, 115, 22;
+  --el-color-primary-light-3: var(--app-primary-hover);
+  --el-color-primary-light-5: color-mix(in srgb, var(--app-primary) 50%, var(--app-surface));
+  --el-color-primary-light-7: color-mix(in srgb, var(--app-primary) 30%, var(--app-surface));
+  --el-color-primary-light-8: var(--app-primary-selected);
+  --el-color-primary-light-9: var(--app-primary-subtle);
+  --el-color-primary-dark-2: var(--app-primary-active);
+
+  --el-bg-color: var(--app-surface);
+  --el-bg-color-page: var(--app-bg);
+  --el-bg-color-overlay: var(--app-surface-elevated);
+  --el-text-color-primary: var(--app-text-primary);
+  --el-text-color-regular: var(--app-text-regular);
+  --el-text-color-secondary: var(--app-text-secondary);
+  --el-text-color-placeholder: var(--app-text-secondary);
+  --el-text-color-disabled: var(--app-text-disabled);
+
+  --el-border-color: var(--app-border);
+  --el-border-color-light: var(--app-border);
+  --el-border-color-lighter: color-mix(in srgb, var(--app-border) 75%, var(--app-surface));
+  --el-border-color-extra-light: var(--app-surface-elevated);
+  --el-border-color-dark: color-mix(in srgb, var(--app-border) 75%, var(--app-text-secondary));
+  --el-border-color-darker: color-mix(in srgb, var(--app-border) 50%, var(--app-text-secondary));
+
+  --el-fill-color: var(--app-border);
+  --el-fill-color-light: var(--app-surface-elevated);
+  --el-fill-color-lighter: color-mix(in srgb, var(--app-surface) 50%, var(--app-surface-elevated));
+  --el-fill-color-extra-light: var(--app-surface);
+  --el-fill-color-blank: var(--app-surface);
+  --el-fill-color-dark: color-mix(in srgb, var(--app-border) 85%, var(--app-text-secondary));
+  --el-fill-color-darker: color-mix(in srgb, var(--app-border) 70%, var(--app-text-secondary));
+  --el-disabled-bg-color: var(--app-surface-elevated);
+  --el-disabled-text-color: var(--app-text-disabled);
+  --el-disabled-border-color: var(--app-border);
+  --el-mask-color: rgb(0 0 0 / 80%);
+  --el-mask-color-extra-light: rgb(13 13 13 / 75%);
+  --el-overlay-color: rgb(0 0 0 / 85%);
+  --el-overlay-color-light: rgb(0 0 0 / 70%);
+  --el-overlay-color-lighter: rgb(0 0 0 / 55%);
+
+  .el-card {
+    --el-card-bg-color: var(--app-surface);
+  }
+
+  .el-menu {
+    --el-menu-bg-color: var(--app-surface);
+    --el-menu-text-color: var(--app-text-regular);
+    --el-menu-active-color: var(--app-primary);
+    --el-menu-hover-bg-color: var(--app-surface-elevated);
+  }
+
+  .el-menu-item.is-active {
+    background-color: var(--app-primary-subtle);
+    box-shadow: inset 3px 0 var(--app-primary);
+  }
+
+  .el-table {
+    --el-table-bg-color: var(--app-surface);
+    --el-table-tr-bg-color: var(--app-surface);
+    --el-table-header-bg-color: var(--app-surface-elevated);
+    --el-table-header-text-color: var(--app-text-primary);
+    --el-table-text-color: var(--app-text-regular);
+    --el-table-border-color: var(--app-border);
+    --el-table-row-hover-bg-color: var(--app-surface-elevated);
+    --el-table-current-row-bg-color: var(--app-primary-selected);
+  }
+
+  .el-table__body tr:has(.el-table-column--selection .el-checkbox.is-checked) > td.el-table__cell {
+    background-color: var(--app-primary-selected);
+  }
+
+  // Dark text gives solid orange actions sufficient contrast in every state.
+  .el-button--primary:not(.is-plain):not(.is-text):not(.is-link) {
+    --el-button-text-color: var(--app-bg);
+    --el-button-hover-text-color: var(--app-bg);
+    --el-button-active-text-color: var(--app-bg);
+  }
+
+  .el-pagination {
+    --el-pagination-button-color: var(--app-text-regular);
+    --el-pagination-button-bg-color: var(--app-surface-elevated);
+  }
+
+  .el-pagination.is-background .el-pager li.is-active {
+    color: var(--app-bg);
+  }
+}

@@ -64,7 +64,7 @@ async function submitLogin(): Promise<void> {
     <el-card class="login-card" shadow="never">
       <template #header>
         <div class="login-card__header">
-          <h1>Team Management</h1>
+          <h1>Yexiao Team Management</h1>
           <span>Sign in to continue</span>
         </div>
       </template>
@@ -110,14 +110,13 @@ async function submitLogin(): Promise<void> {
 
 <style scoped lang="scss">
 .login-page {
+  box-sizing: border-box;
   display: flex;
   min-height: 100vh;
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background:
-    linear-gradient(135deg, rgb(243 247 251 / 94%), rgb(238 242 247 / 96%)),
-    var(--el-bg-color-page);
+  background: var(--app-bg);
 }
 
 .login-card {

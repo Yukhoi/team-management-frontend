@@ -111,7 +111,7 @@ onMounted(() => {
       <div class="dashboard-page__hero-content">
         <div>
           <h1>Dashboard</h1>
-          <p>Team Management System Overview</p>
+          <p>Yexiao Team Management System Overview</p>
         </div>
 
         <div class="dashboard-page__welcome">

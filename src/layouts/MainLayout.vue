@@ -128,7 +128,7 @@ async function handleUserCommand(command: string): Promise<void> {
   <el-container class="main-layout">
     <el-header class="main-layout__header">
       <div class="main-layout__brand">
-        <span class="main-layout__title">Team Management</span>
+        <span class="main-layout__title">Yexiao Team Management</span>
       </div>
 
       <el-dropdown trigger="click" @command="handleUserCommand">
@@ -203,7 +203,7 @@ async function handleUserCommand(command: string): Promise<void> {
     justify-content: space-between;
     gap: 16px;
     border-bottom: 1px solid var(--el-border-color-light);
-    background-color: var(--el-bg-color);
+    background-color: var(--app-bg);
   }
 
   &__title {
@@ -224,6 +224,16 @@ async function handleUserCommand(command: string): Promise<void> {
     cursor: pointer;
     font: inherit;
     padding: 0;
+
+    &:hover {
+      color: var(--app-primary-hover);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--app-primary);
+      outline-offset: 6px;
+      border-radius: 4px;
+    }
   }
 
   &__identity {
@@ -266,7 +276,7 @@ async function handleUserCommand(command: string): Promise<void> {
     align-content: start;
     gap: 16px;
     padding: 20px;
-    background-color: var(--el-fill-color-lighter);
+    background-color: var(--app-bg);
   }
 
   &__breadcrumb {
@@ -276,6 +286,10 @@ async function handleUserCommand(command: string): Promise<void> {
 
 @media (max-width: 760px) {
   .main-layout {
+    &__title {
+      white-space: normal;
+    }
+
     &__header {
       min-height: auto;
       flex-wrap: wrap;
