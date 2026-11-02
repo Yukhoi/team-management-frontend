@@ -79,8 +79,6 @@ onMounted(() => {
 
     <el-card v-else class="statistics-page__table-card" shadow="never">
       <el-table :data="rows" stripe>
-        <el-table-column prop="matchId" label="Match ID" min-width="110" />
-        <el-table-column prop="tournamentId" label="Tournament ID" min-width="130" />
         <el-table-column prop="tournamentName" label="Tournament" min-width="180" />
         <el-table-column prop="season" label="Season" min-width="100" />
         <el-table-column prop="matchTime" label="Match Time" min-width="190" />

@@ -302,10 +302,8 @@ onBeforeUnmount(() => {
 
     <el-card v-else class="statistics-page__table-card" shadow="never">
       <el-table :data="rows" stripe>
-        <el-table-column prop="playerId" label="Player ID" min-width="110" />
         <el-table-column prop="playerName" label="Player" min-width="160" />
         <el-table-column prop="season" label="Season" min-width="100" />
-        <el-table-column prop="tournamentId" label="Tournament ID" min-width="130" />
         <el-table-column prop="tournamentName" label="Tournament" min-width="180" />
         <el-table-column prop="appearances" label="Appearances" min-width="130" sortable />
         <el-table-column prop="starts" label="Starts" min-width="100" sortable />

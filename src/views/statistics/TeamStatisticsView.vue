@@ -2,19 +2,59 @@
 import { onMounted, reactive, ref } from 'vue'
 
 import { getTeamStatistics } from '../../api/statistics'
+import { getTournaments } from '../../api/tournament'
 import type { TeamStatistics, TeamStatisticsParams } from '../../types/statistics'
+import type { TournamentResponse } from '../../types/tournament'
 
 const rows = ref<TeamStatistics[]>([])
+const tournaments = ref<TournamentResponse[]>([])
 const loading = ref(false)
+const tournamentLoading = ref(false)
+const tournamentError = ref(false)
 const error = ref(false)
+let latestRequest = 0
 
 const filters = reactive<TeamStatisticsParams>({
   season: '2026',
-  tournamentId: 1,
+  tournamentId: undefined,
 })
 
+async function loadTournamentOptions(): Promise<void> {
+  tournamentLoading.value = true
+  tournamentError.value = false
+
+  try {
+    const response = await getTournaments({ page: 0, size: 100 })
+    tournaments.value = (response.content ?? []).filter(
+      (tournament) => tournament.id && tournament.name,
+    )
+
+    if (!filters.tournamentId) {
+      const firstTournament = tournaments.value.find(
+        (tournament) => tournament.season === filters.season,
+      ) ?? tournaments.value[0]
+      filters.tournamentId = firstTournament?.id
+    }
+  } catch {
+    tournaments.value = []
+    rows.value = []
+    tournamentError.value = true
+  } finally {
+    tournamentLoading.value = false
+  }
+
+  if (!tournamentError.value) {
+    await loadData()
+  }
+}
+
 async function loadData(): Promise<void> {
+  const request = ++latestRequest
+
   if (!filters.season || !filters.tournamentId) {
+    rows.value = []
+    loading.value = false
+    error.value = false
     return
   }
 
@@ -22,18 +62,24 @@ async function loadData(): Promise<void> {
   error.value = false
 
   try {
-    const response = await getTeamStatistics(filters)
-    rows.value = response.data ?? []
+    const response = await getTeamStatistics({ ...filters })
+    if (request === latestRequest) {
+      rows.value = response.data ?? []
+    }
   } catch {
-    rows.value = []
-    error.value = true
+    if (request === latestRequest) {
+      rows.value = []
+      error.value = true
+    }
   } finally {
-    loading.value = false
+    if (request === latestRequest) {
+      loading.value = false
+    }
   }
 }
 
 onMounted(() => {
-  void loadData()
+  void loadTournamentOptions()
 })
 </script>
 
@@ -46,17 +92,51 @@ onMounted(() => {
           <el-form-item label="Season">
             <el-input v-model="filters.season" />
           </el-form-item>
-          <el-form-item label="Tournament ID">
-            <el-input-number v-model="filters.tournamentId" :min="1" />
+          <el-form-item label="Tournament">
+            <el-select
+              v-model="filters.tournamentId"
+              class="statistics-page__select"
+              clearable
+              filterable
+              :loading="tournamentLoading"
+              :disabled="tournamentLoading || tournamentError"
+              placeholder="Select tournament"
+              no-data-text="No tournaments found"
+              @change="loadData"
+            >
+              <el-option
+                v-for="tournament in tournaments"
+                :key="tournament.id"
+                :label="tournament.name"
+                :value="tournament.id"
+              />
+            </el-select>
           </el-form-item>
-          <el-button type="primary" :disabled="loading" @click="loadData">
+          <el-button
+            type="primary"
+            :disabled="loading || tournamentLoading || tournamentError"
+            @click="loadData"
+          >
             Search
           </el-button>
         </el-form>
       </div>
+      <el-alert
+        v-if="tournamentError"
+        title="Failed to load tournaments"
+        type="error"
+        show-icon
+        :closable="false"
+      >
+        <template #default>
+          <el-button type="danger" plain size="small" @click="loadTournamentOptions">
+            Retry
+          </el-button>
+        </template>
+      </el-alert>
     </el-card>
 
-    <el-skeleton v-if="loading" :rows="6" animated />
+    <el-skeleton v-if="loading || tournamentLoading" :rows="6" animated />
     <el-alert
       v-else-if="error"
       title="Failed to load team statistics"
@@ -74,7 +154,6 @@ onMounted(() => {
     <el-card v-else class="statistics-page__table-card" shadow="never">
       <el-table :data="rows" stripe>
         <el-table-column prop="rankNo" label="Rank" min-width="90" sortable />
-        <el-table-column prop="teamId" label="Team ID" min-width="110" />
         <el-table-column prop="teamName" label="Team" min-width="160" />
         <el-table-column prop="played" label="Played" min-width="100" sortable />
         <el-table-column prop="win" label="Wins" min-width="90" sortable />
@@ -85,10 +164,13 @@ onMounted(() => {
         <el-table-column prop="goalDiff" label="Goal Diff" min-width="120" sortable />
         <el-table-column prop="points" label="Points" min-width="100" sortable />
         <el-table-column prop="season" label="Season" min-width="100" />
-        <el-table-column prop="tournamentId" label="Tournament ID" min-width="130" />
         <el-table-column prop="tournamentName" label="Tournament" min-width="180" />
         <template #empty>
-          <el-empty description="No team statistics found" />
+          <el-empty
+            :description="filters.tournamentId
+              ? 'No team statistics found'
+              : 'Select a tournament to view team statistics'"
+          />
         </template>
       </el-table>
     </el-card>
@@ -108,6 +190,10 @@ onMounted(() => {
   &__header-content {
     display: grid;
     gap: 16px;
+  }
+
+  &__select {
+    width: 190px;
   }
 
   h1 {
